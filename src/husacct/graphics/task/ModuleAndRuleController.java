@@ -16,13 +16,13 @@ import husacct.graphics.domain.figures.ModuleFigure;
 import husacct.graphics.domain.figures.RelationFigure;
 import husacct.validate.IValidateService;
 
-public class DefinedController extends DrawingController {
+public class ModuleAndRuleController extends DrawingController {
 	protected IAnalyseService			analyseService;
 	protected IDefineService			defineService;
 	protected IValidateService			validateService;
 	
 	
-	public DefinedController() {
+	public ModuleAndRuleController() {
 		super();
 		initializeServices();
 	}
@@ -39,6 +39,14 @@ public class DefinedController extends DrawingController {
 	
 	@Override
 	protected ArrayList<ModuleFigure> getModuleFiguresInRoot() {
+//		ArrayList<ModuleFigure> rootModuleFigures2 = new ArrayList<ModuleFigure>();
+//		for (RuleDTO rule : defineService.getDefinedRules()){
+//			ModuleFigure f = figureFactory.createModuleFigure(rule.moduleFrom);
+//			if (!rootModuleFigures2.contains(f)){
+//				rootModuleFigures2.add(f);
+//			}
+//		}
+//		return rootModuleFigures2;
 		ModuleDTO[] rootModules = defineService.getModule_AllRootModules();
 		ArrayList<ModuleFigure> rootModuleFigures = new ArrayList<ModuleFigure>();
 		for (AbstractDTO rootModule : rootModules) {
@@ -64,27 +72,8 @@ public class DefinedController extends DrawingController {
 
 	@Override
 	protected RelationFigure getRelationFigureBetween(ModuleFigure figureFrom, ModuleFigure figureTo) {
-		RelationFigure dependencyFigure = null;
-		if ((figureFrom != null) && (figureTo != null) && !figureFrom.getUniqueName().equals(figureTo.getUniqueName())){ 
-			ArrayList<DependencyDTO> dependencies = new ArrayList<DependencyDTO>();
-			HashSet<String> physicalClassPathsFrom = defineService.getModule_AllPhysicalClassPathsOfModule(figureFrom.getUniqueName());
-			HashSet<String> physicalClassPathsTo = defineService.getModule_AllPhysicalClassPathsOfModule(figureTo.getUniqueName());
-			for (String physicalClassPathFrom : physicalClassPathsFrom){
-				for (String physicalClassPathTo : physicalClassPathsTo) {
-					DependencyDTO[] foundDependencies = analyseService.getDependenciesFromClassToClass(physicalClassPathFrom, physicalClassPathTo);
-					for (DependencyDTO tempDependency : foundDependencies)
-						dependencies.add(tempDependency);
-				}
-			}
-			try {
-				if (dependencies.size() > 0) {
-					dependencyFigure = figureFactory.createRelationFigure_Dependency(dependencies.toArray(new DependencyDTO[] {}));
-				}
-			} catch (Exception e) {
-				logger.error(" Could not create a dependency figure." + e.getMessage());
-			}
-		}
-		return dependencyFigure;
+		RuleDTO[] matchingRules = defineService.getRulesByLogicalPath(figureFrom.getUniqueName(), figureTo.getUniqueName());
+		return figureFactory.createRelationFigure_Rule(matchingRules);
 	}
 	
 	@Override
@@ -104,28 +93,26 @@ public class DefinedController extends DrawingController {
 		return dependencies.toArray(new DependencyDTO[] {});
 	}
 	
+//	@Override
+//	protected RuleDTO[] getRulesBetween(ModuleFigure figureFrom, ModuleFigure figureTo) {
+//		ArrayList<RuleDTO> rules = new ArrayList<RuleDTO>();
+//		if ((figureFrom != null) && (figureTo != null) && !figureFrom.getUniqueName().equals(figureTo.getUniqueName())){ 
+//			HashSet<String> physicalClassPathsFrom = defineService.getModule_AllPhysicalClassPathsOfModule(figureFrom.getUniqueName());
+//			HashSet<String> physicalClassPathsTo = defineService.getModule_AllPhysicalClassPathsOfModule(figureTo.getUniqueName());
+//			for (String physicalClassPathFrom : physicalClassPathsFrom){
+//				for (String physicalClassPathTo : physicalClassPathsTo) {
+//					RuleDTO[] foundRules = analyseService.getDependenciesFromClassToClass(physicalClassPathFrom, physicalClassPathTo);
+//					for (RuleDTO tempDependency : foundRules)
+//						rules.add(tempDependency);
+//				}
+//			}
+//		}
+//		return rules.toArray(new RuleDTO[] {});
+//	}
+	
 	@Override
 	protected boolean hasRelationBetween(ModuleFigure figureFrom, ModuleFigure figureTo){
-		boolean hasDependencies = false;
-		if ((figureFrom != null) && (figureTo != null) && !figureFrom.getUniqueName().equals(figureTo.getUniqueName())){ 
-			HashSet<String> physicalClassPathsFrom = defineService.getModule_AllPhysicalClassPathsOfModule(figureFrom.getUniqueName());
-			HashSet<String> physicalClassPathsTo = defineService.getModule_AllPhysicalClassPathsOfModule(figureTo.getUniqueName());
-			DependencyDTO[] foundDependencies;
-			for (String physicalClassPathFrom : physicalClassPathsFrom){
-				for (String physicalClassPathTo : physicalClassPathsTo) {
-					foundDependencies = analyseService.getDependenciesFromClassToClass(physicalClassPathFrom, physicalClassPathTo);
-					if (foundDependencies.length > 0) {
-						return true;
-					} else {
-						foundDependencies = analyseService.getDependenciesFromClassToClass(physicalClassPathTo, physicalClassPathFrom);
-						if (foundDependencies.length > 0) {
-							return true;
-						}
-					}
-				}
-			}
-		}
-		return hasDependencies;		
+		return defineService.getRulesByLogicalPath(figureFrom.getUniqueName(), figureTo.getUniqueName()).length > 0;	
 	}
 
 	@Override
@@ -173,7 +160,13 @@ public class DefinedController extends DrawingController {
 
 	@Override
 	protected RuleDTO[] getRulesBetween(ModuleFigure figureFrom, ModuleFigure figureTo) {
-		return new RuleDTO[]{};
+		if ((figureFrom != null) && (figureTo != null) ){ 
+			RuleDTO[] returnValue = defineService.getRulesByLogicalPath(figureFrom.getUniqueName(), figureTo.getUniqueName());
+			return returnValue;
+		}
+		 else {
+			return new RuleDTO[]{};
+		}
 	}
 	
 }
